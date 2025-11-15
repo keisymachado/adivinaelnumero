@@ -133,7 +133,6 @@ async def get_status():
         game_completed=current_game.completed
     )
 
-# 🔥 NUEVO: Endpoint para reiniciar fácilmente
 @app.get("/new")
 async def new_game():
     """Inicia una nueva partida (fácil desde navegador)"""
@@ -141,7 +140,7 @@ async def new_game():
     current_game = GameSession()
     
     return {
-        "message": "🎯 ¡Nueva partida iniciada!",
+        "message": " ¡Nueva partida iniciada!",
         "instruction": "Adivina el número entre 1 y 100 usando: /guess?number=TU_NUMERO",
         "student": "Keisy"
     }
@@ -151,12 +150,12 @@ async def root():
     """Página principal con instrucciones para jugar"""
     global current_game
     
-    # Auto-inicializar si no hay juego
+   
     if not current_game:
         current_game = GameSession()
     
     return {
-        "message": "🎯 Adivina el Número API - Keisy", 
+        "message": " Adivina el Número API - Keisy", 
         "student": "Keisy",
         "current_game": {
             "active": True,
@@ -178,7 +177,7 @@ async def root():
 
 @app.get("/debug")
 async def debug_info():
-    """Endpoint de debug (solo para desarrollo)"""
+    
     global current_game
     if current_game:
         return {
