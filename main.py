@@ -4,6 +4,7 @@ import random
 import uuid
 from datetime import datetime
 import uvicorn
+import os
 
 app = FastAPI(
     title="Adivina el Número API - Keisy",
@@ -43,7 +44,7 @@ class StatusResponse(BaseModel):
     game_completed: bool
     student: str = "Keisy"
 
-@app.post("/start", response_model=StartResponse)
+@app.get("/start", response_model=StartResponse)
 async def start_game():
     """Inicia una nueva partida generando un número aleatorio"""
     global current_game
@@ -144,4 +145,5 @@ async def debug_info():
     return {"message": "No hay partida activa"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
