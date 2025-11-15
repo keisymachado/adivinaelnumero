@@ -4,7 +4,6 @@ import random
 import uuid
 from datetime import datetime
 import uvicorn
-import os
 
 app = FastAPI(
     title="Adivina el Número API - Keisy",
@@ -23,6 +22,13 @@ class GameSession:
         self.created_at = datetime.now()
         self.completed = False
         self.guess_history = []
+
+# 🔥 NUEVO: Función para auto-inicializar el juego
+def initialize_game():
+    global current_game
+    if not current_game:
+        current_game = GameSession()
+    return current_game
 
 class StartResponse(BaseModel):
     message: str
@@ -44,9 +50,21 @@ class StatusResponse(BaseModel):
     game_completed: bool
     student: str = "Keisy"
 
-@app.get("/start", response_model=StartResponse)
+@app.post("/start", response_model=StartResponse)
 async def start_game():
     """Inicia una nueva partida generando un número aleatorio"""
+    global current_game
+    
+    current_game = GameSession()
+    
+    return StartResponse(
+        message="Nueva partida iniciada. ¡Adivina el número entre 1 y 100!",
+        game_id=current_game.game_id
+    )
+
+@app.get("/start", response_model=StartResponse)
+async def start_game_get():
+    """Inicia una nueva partida (GET para navegador)"""
     global current_game
     
     current_game = GameSession()
@@ -61,16 +79,14 @@ async def make_guess(number: int):
     """Responde si el número es alto, bajo o correcto"""
     global current_game
     
+    # 🔥 NUEVO: Si no hay partida, crea una automáticamente
     if not current_game:
-        raise HTTPException(
-            status_code=400, 
-            detail="No hay partida activa. Inicia una con POST /start"
-        )
+        current_game = GameSession()
     
     if current_game.completed:
         raise HTTPException(
             status_code=400, 
-            detail="Esta partida ya fue completada. Inicia una nueva con POST /start"
+            detail="Esta partida ya fue completada. Inicia una nueva con /start o /new"
         )
     
     if number < 1 or number > 100:
@@ -117,18 +133,47 @@ async def get_status():
         game_completed=current_game.completed
     )
 
+# 🔥 NUEVO: Endpoint para reiniciar fácilmente
+@app.get("/new")
+async def new_game():
+    """Inicia una nueva partida (fácil desde navegador)"""
+    global current_game
+    current_game = GameSession()
+    
+    return {
+        "message": "🎯 ¡Nueva partida iniciada!",
+        "instruction": "Adivina el número entre 1 y 100 usando: /guess?number=TU_NUMERO",
+        "student": "Keisy"
+    }
+
 @app.get("/")
 async def root():
+    """Página principal con instrucciones para jugar"""
+    global current_game
+    
+    # Auto-inicializar si no hay juego
+    if not current_game:
+        current_game = GameSession()
+    
     return {
-        "message": "🎯 Adivina el Número API", 
+        "message": "🎯 Adivina el Número API - Keisy", 
         "student": "Keisy",
-        "description": "Adivina el número secreto entre 1 y 100",
-        "endpoints": {
-            "start": "POST /start - Inicia nueva partida",
-            "guess": "GET /guess?number=X - Adivina el número", 
-            "status": "GET /status - Estado de la partida",
-            "docs": "GET /docs - Documentación interactiva"
-        }
+        "current_game": {
+            "active": True,
+            "attempts": current_game.attempts,
+            "completed": current_game.completed
+        },
+        "instructions": {
+            "jugar_ahora": "Ve a /guess?number=50 para empezar a adivinar",
+            "iniciar_nueva": "Ve a /new para nueva partida", 
+            "ver_estado": "Ve a /status para ver progreso",
+            "adivinar": "Usa /guess?number=X donde X es tu número"
+        },
+        "ejemplos": [
+            "https://adivinaelnumero-production.up.railway.app/guess?number=50",
+            "https://adivinaelnumero-production.up.railway.app/guess?number=25",
+            "https://adivinaelnumero-production.up.railway.app/status"
+        ]
     }
 
 @app.get("/debug")
@@ -145,5 +190,4 @@ async def debug_info():
     return {"message": "No hay partida activa"}
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
